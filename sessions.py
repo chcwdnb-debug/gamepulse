@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 from generate_player import generate_players
 
 
-def make_event(player, event_type, ts):
+def make_event(player, event_type, ts,amount = None):
     return {
         "player_id": player["player_id"],
         "event_type": event_type,
@@ -11,6 +11,7 @@ def make_event(player, event_type, ts):
         "platform": player["platform"],
         "region": player["region"],
         "game_version": player["game_version"],
+        "amount": amount,
     }
 
 
@@ -43,7 +44,10 @@ def generate_session(player, day):
     #         加 match_start、match_end
         events.append(make_event(player,"match_start",match_start))
         events.append(make_event(player,"match_end",match_end))
-
+    if player["is_payer"] and random.random()<0.3:
+        amount = random.choices([4.99, 9.99, 19.99, 99.99],weights=[0.4, 0.35, 0.2, 0.05])[0]
+        buy_time=events[-1]["timestamp"]+timedelta(minutes=random.randint(1,3))
+        events.append(make_event(player,"purchase",buy_time,amount))
     # TODO: logout = 最后一个事件 + 1~5 分钟
     logout = events[-1]["timestamp"] + timedelta(minutes=random.randint(1,5))
     events.append(make_event(player,"logout",logout))
@@ -65,7 +69,10 @@ def generate_events(players, start_date, n_days):
                 session = generate_session(player, day)
                 if day==player["signup_date"]:
                     all_events.append(make_event(player,"signup",session[0]["timestamp"] -timedelta(minutes=1)))
-                all_events.extend(session)
+                all_events.extend(session)\
+    
+        
+        
 
     return all_events
 
@@ -78,3 +85,4 @@ if __name__ == "__main__":
         print(e)
     print(len(events))
     print(max(e["timestamp"] for e in events))
+    print(sum(1 for e in events if e["event_type"] == "purchase"))

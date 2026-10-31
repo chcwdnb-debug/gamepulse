@@ -10,8 +10,10 @@ def generate_players(n_players,start_date, n_days):
         signup_date = start_date +timedelta(days=random.randint(0, n_days-1))
         region1= random.choices(["US", "EU","APAC","LATAM"], weights=[0.4, 0.3,0.2,0.1])[0] 
         platform1 = random.choices(["PC", "PS5","Xbox"], weights=[0.45, 0.3,0.25])[0] 
-        p = {"region": region1, "platform": platform1,"player_id":player_id,"game_version":"1.0","signup_date":signup_date}
+        is_payer = random.random() <0.05
+        p = {"region": region1, "platform": platform1,"player_id":player_id,"game_version":"1.0","signup_date":signup_date ,"is_payer": is_payer}
         players.append(p)
+        
     return players
 
 
