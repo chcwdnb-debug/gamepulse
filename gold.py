@@ -19,6 +19,33 @@ FROM {SILVER}
 GROUP BY session_date
 """
 
+
+CRASH_SQL = f"""
+SELECT
+    game_version,
+    platform,
+    -- TODO: n_sessions   这一组有多少个 session
+    COUNT(*) AS n_sessions,
+    -- TODO: n_crashed    其中多少个是崩溃结束的
+    COUNT(*) FILTER(WHERE ended_by_crash) AS n_crashed,
+    -- TODO: crash_rate   崩溃率 = n_crashed / n_sessions保留 3 位小数
+    ROUND(n_crashed *1.0 /n_sessions,3) AS crash_rate
+FROM {SILVER}
+GROUP BY game_version, platform
+"""
+crash_rate_pergame = f"""
+SELECT
+    ROUND(COUNT(*) FILTER (WHERE event_type ='crash')*1.0 / COUNT(*) FILTER (WHERE event_type ='match_start'),3) AS crash_rate_pergame,
+    game_version,platform
+FROM {BRONZE}
+GROUP BY game_version,platform
+ORDER BY game_version, platform
+
+"""
+con.sql(crash_rate_pergame).show()       
+
+con.sql(CRASH_SQL + " ORDER BY game_version, platform").show()
+con.execute(f"COPY ({CRASH_SQL}) TO 'data/gold/crash_by_version.parquet' (FORMAT PARQUET)")
 con.sql(GOLD_SQL + " ORDER BY session_date").show(max_rows=40)
 
 # 验证通过后再取消注释：
