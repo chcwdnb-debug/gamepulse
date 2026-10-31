@@ -1,18 +1,28 @@
 import random
 from datetime import date, datetime, timedelta
 from generate_player import generate_players
+RELEASE_DAY = date(2026, 9, 15)
 
-
-def make_event(player, event_type, ts,amount = None):
+def make_event(player, event_type, ts,version,amount = None):
     return {
         "player_id": player["player_id"],
         "event_type": event_type,
         "timestamp": ts,
         "platform": player["platform"],
         "region": player["region"],
-        "game_version": player["game_version"],
+        "game_version": version,
         "amount": amount,
     }
+def get_version(day):
+    if day < RELEASE_DAY:
+        return "1.0"
+    else:  
+        return "1.1"
+def crash_prob(player,version):
+    if player["platform"]=="PS5" and version=="1.1":
+        return 0.08
+    else:
+        return 0.02
 
 
 def is_active(days_since_signup):
@@ -28,48 +38,62 @@ def is_active(days_since_signup):
 
 def generate_session(player, day):
     events = []
+    version = get_version(day)
     # TODO: login 时间 = day 当天 00:00 + 随机 480~1380 分钟（即 8:00~23:00）
     login = datetime(day.year,day.month,day.day) +timedelta(minutes=random.randint(480,1380))
     # TODO: 加 login 事件（用 make_event）
-    events.append(make_event(player,"login",login))
+    events.append(make_event(player,"login",login,version))
     
     # TODO: 随机 1~5 场比赛，每场：
-
+    crashed =False;
     for i in range(random.randint(1,5)):
     #         start = 上一个事件的时间 + 1~5 分钟   （提示：events[-1]["timestamp"]）
         match_start=events[-1]["timestamp"]+timedelta(minutes= random.randint(1,5))
     #         end   = start + 10~25 分钟
+        events.append(make_event(player,"match_start",match_start,version,))
+        if random.random()<crash_prob(player,version):
+            crashed=True
+            b_time=match_start+timedelta(minutes=random.randint(1,15))
+            events.append(make_event(player,"crash",b_time,version))
+            break
+
+
         match_end = match_start+timedelta(minutes=random.randint(10,25))
 
     #         加 match_start、match_end
-        events.append(make_event(player,"match_start",match_start))
-        events.append(make_event(player,"match_end",match_end))
-    if player["is_payer"] and random.random()<0.3:
-        amount = random.choices([4.99, 9.99, 19.99, 99.99],weights=[0.4, 0.35, 0.2, 0.05])[0]
-        buy_time=events[-1]["timestamp"]+timedelta(minutes=random.randint(1,3))
-        events.append(make_event(player,"purchase",buy_time,amount))
+        
+
+        events.append(make_event(player,"match_end",match_end,version,))
+    if not crashed:
+
+        if player["is_payer"] and random.random()<0.3:
+            amount = random.choices([4.99, 9.99, 19.99, 99.99],weights=[0.4, 0.35, 0.2, 0.05])[0]
+            buy_time=events[-1]["timestamp"]+timedelta(minutes=random.randint(1,3))
+            events.append(make_event(player,"purchase",buy_time,version,amount))
     # TODO: logout = 最后一个事件 + 1~5 分钟
-    logout = events[-1]["timestamp"] + timedelta(minutes=random.randint(1,5))
-    events.append(make_event(player,"logout",logout))
+        logout = events[-1]["timestamp"] + timedelta(minutes=random.randint(1,5))
+        events.append(make_event(player,"logout",logout,version))
     return events
 
 
 def generate_events(players, start_date, n_days):
     end_date = start_date + timedelta(days=n_days - 1)
     all_events = []
+
     for player in players:
         # TODO: 对 signup_date 到 end_date 之间的每一天：
         #         如果 is_active(距离注册的天数)：
         #             session = generate_session(player, 当天)
         #             如果是第 0 天：先加 signup 事件（时间 = session[0]["timestamp"] 减 1 分钟）
         #             再把 session 加进 all_events
+
         for d in range((end_date -player["signup_date"]).days + 1):
             day= player["signup_date"] + timedelta(days=d)
             if is_active((day-player["signup_date"]).days): 
                 session = generate_session(player, day)
                 if day==player["signup_date"]:
-                    all_events.append(make_event(player,"signup",session[0]["timestamp"] -timedelta(minutes=1)))
-                all_events.extend(session)\
+                    all_events.append(make_event(player,"signup",session[0]["timestamp"] -timedelta(minutes=1),version=get_version(day),))
+                all_events.extend(session)
     
         
         
@@ -86,3 +110,9 @@ if __name__ == "__main__":
     print(len(events))
     print(max(e["timestamp"] for e in events))
     print(sum(1 for e in events if e["event_type"] == "purchase"))
+    print(set(e["game_version"] for e in events))
+    print([e["game_version"] for e in events if e["timestamp"].date() == date(2026, 9, 14)][:3])
+    n_login  = sum(1 for e in events if e["event_type"] == "login")
+    n_logout = sum(1 for e in events if e["event_type"] == "logout")
+    n_crash  = sum(1 for e in events if e["event_type"] == "crash")
+    print(n_login, n_logout, n_crash)

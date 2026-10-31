@@ -83,10 +83,3 @@ print(con.sql(f"""
     FROM {BRONZE}
 
 """))
-con.sql(f"""
-   SELECT SUM(amount) FROM {BRONZE} WHERE event_type = 'purchase'
-
-
-    SELECT SUM(revenue) FROM read_parquet('data/gold/daily_metrics.parquet')
-""").show()
-
