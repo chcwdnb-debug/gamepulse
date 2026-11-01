@@ -83,3 +83,9 @@ print(con.sql(f"""
     FROM {BRONZE}
 
 """))
+print(con.sql(f"""
+    SELECT player_id,"timestamp",amount
+
+    FROM {BRONZE}
+    WHERE event_type='purchase' AND dt= '2026-09-15'
+"""))

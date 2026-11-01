@@ -8,13 +8,13 @@ SILVER = "read_parquet('data/silver/sessions.parquet')"
 GOLD_SQL = f"""
 SELECT
     session_date,
-    COUNT(DISTINCT player_id) AS DAU,              
+    COUNT(DISTINCT player_id) AS dau,              
     COUNT(*) AS n_sessions,        
     ROUND(AVG(session_minutes),1) AS avg_session_minutes,
     SUM(n_matches) AS total_matches,
     SUM(revenue) AS revenue,
     COUNT(DISTINCT player_id) FILter(WHERE n_purchases>0) AS payers,
-    ROUND( payers  * 1.0/ DAU,3)   AS payer_rate
+    ROUND( payers  * 1.0/ dau,3)   AS payer_rate
 FROM {SILVER}       
 GROUP BY session_date
 """
@@ -42,6 +42,8 @@ GROUP BY game_version,platform
 ORDER BY game_version, platform
 
 """
+
+
 con.sql(crash_rate_pergame).show()       
 
 con.sql(CRASH_SQL + " ORDER BY game_version, platform").show()
